@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thailand — Jewish & Israeli Community Locations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --z1: #2563eb;
+  --z2: #16a34a;
+  --z3: #dc2626;
+  --z4: #9333ea;
+  --panel-bg: rgba(10, 12, 18, 0.94);
+  --panel-border: rgba(255,255,255,0.08);
+  --text-primary: #f0f0ed;
+  --text-secondary: #9a9a8e;
+  --text-muted: #5a5a52;
+  --accent: #f0c040;
+  --radius: 10px;
+  --font: 'DM Sans', sans-serif;
+  --mono: 'DM Mono', monospace;
+}
+
+html, body { width: 100%; height: 100%; overflow: hidden; font-family: var(--font); background: #0a0c12; }
+
+#map { position: absolute; inset: 0; z-index: 1; }
+
+/* ── SIDEBAR ── */
+#sidebar {
+  position: absolute;
+  top: 0; left: 0; bottom: 0;
+  width: 300px;
+  z-index: 1000;
+  background: var(--panel-bg);
+  border-right: 1px solid var(--panel-border);
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+
+#sidebar.collapsed { transform: translateX(-300px); }
+
+.sidebar-header {
+  padding: 20px 18px 14px;
+  border-bottom: 1px solid var(--panel-border);
+  flex-shrink: 0;
+}
+
+.sidebar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.logo-mark {
+  width: 32px; height: 32px;
+  background: var(--accent);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.logo-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+.logo-sub {
+  font-size: 10px;
+  color: var(--text-secondary);
+  font-weight: 400;
+  margin-top: 1px;
+}
+
+/* Search */
+.search-wrap {
+  position: relative;
+}
+#search {
+  width: 100%;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 8px 12px 8px 34px;
+  font-family: var(--font);
+  font-size: 12.5px;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.2s;
+}
+#search::placeholder { color: var(--text-muted); }
+#search:focus { border-color: rgba(240,192,64,0.4); }
+.search-icon {
+  position: absolute;
+  left: 10px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 13px;
+  pointer-events: none;
+}
+
+/* Zones */
+.zones-section {
+  padding: 14px 18px 8px;
+  border-bottom: 1px solid var(--panel-border);
+  flex-shrink: 0;
+}
+.section-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.zone-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 3px;
+  transition: background 0.15s;
+  user-select: none;
+}
+.zone-toggle:hover { background: rgba(255,255,255,0.04); }
+.zone-toggle { cursor: pointer; }
+
+.zone-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: opacity 0.2s;
+}
+.zone-toggle.off .zone-dot { opacity: 0.25; }
+
+.zone-info { flex: 1; }
+.zone-name { font-size: 12px; font-weight: 500; color: var(--text-primary); }
+.zone-toggle.off .zone-name { color: var(--text-muted); }
+.zone-toggle.active-zone { background: rgba(240,192,64,0.08); border-left: 2px solid var(--accent); }
+.zone-count { font-size: 10px; color: var(--text-secondary); margin-top: 1px; }
+
+.zone-fly {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 10px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: var(--font);
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.zone-fly:hover { background: rgba(255,255,255,0.1); color: var(--text-primary); }
+
+/* Sub-zone legend */
+.legend-section {
+  padding: 12px 18px 8px;
+  border-bottom: 1px solid var(--panel-border);
+  flex-shrink: 0;
+}
+.legend-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 8px;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  color: var(--text-secondary);
+  padding: 2px 0;
+}
+.legend-swatch {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Location list */
+.list-section {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+.list-section::-webkit-scrollbar { width: 3px; }
+.list-section::-webkit-scrollbar-track { background: transparent; }
+.list-section::-webkit-scrollbar-thumb { background: var(--panel-border); border-radius: 2px; }
+
+.list-group-label {
+  padding: 10px 18px 4px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.list-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 18px;
+  cursor: pointer;
+  transition: background 0.12s;
+  border-left: 2px solid transparent;
+}
+.list-item:hover { background: rgba(255,255,255,0.04); }
+.list-item.active {
+  background: rgba(240,192,64,0.07);
+  border-left-color: var(--accent);
+}
+.list-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.list-name {
+  font-size: 11.5px;
+  color: var(--text-primary);
+  line-height: 1.3;
+  flex: 1;
+}
+.list-sub {
+  font-size: 9px;
+  color: var(--text-muted);
+  font-family: var(--mono);
+  flex-shrink: 0;
+}
+.list-item.hidden-item { display: none; }
+
+/* Stats bar */
+.stats-bar {
+  padding: 10px 18px;
+  border-top: 1px solid var(--panel-border);
+  display: flex;
+  gap: 16px;
+  flex-shrink: 0;
+}
+.stat { text-align: center; }
+.stat-num { font-size: 15px; font-weight: 600; color: var(--accent); font-family: var(--mono); }
+.stat-label { font-size: 9px; color: var(--text-muted); margin-top: 1px; }
+
+/* Toggle sidebar button */
+#toggle-sidebar {
+  position: absolute;
+  top: 50%;
+  left: 300px;
+  transform: translateY(-50%);
+  z-index: 1001;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-left: none;
+  border-radius: 0 8px 8px 0;
+  width: 20px; height: 48px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-secondary);
+  font-size: 10px;
+  transition: left 0.3s cubic-bezier(0.4,0,0.2,1), background 0.15s;
+  backdrop-filter: blur(16px);
+}
+#toggle-sidebar:hover { background: rgba(255,255,255,0.1); color: var(--text-primary); }
+#toggle-sidebar.collapsed { left: 0; border-left: 1px solid var(--panel-border); border-radius: 0 8px 8px 0; }
+
+/* Top-right controls */
+#top-controls {
+  position: absolute;
+  top: 14px; right: 14px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ctrl-btn {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-family: var(--font);
+  font-size: 11px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex; align-items: center; gap: 6px;
+  backdrop-filter: blur(12px);
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.ctrl-btn:hover { background: rgba(255,255,255,0.1); color: var(--text-primary); }
+.ctrl-btn.active { color: var(--accent); border-color: rgba(240,192,64,0.3); }
+
+/* Popup */
+.leaflet-popup-content-wrapper {
+  background: var(--panel-bg) !important;
+  border: 1px solid var(--panel-border) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5) !important;
+  backdrop-filter: blur(16px);
+  color: var(--text-primary) !important;
+}
+.leaflet-popup-tip { background: var(--panel-bg) !important; }
+.leaflet-popup-content { margin: 12px 16px !important; }
+.popup-name { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; line-height: 1.3; }
+.popup-meta { display: flex; gap: 6px; flex-wrap: wrap; }
+.popup-tag {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-family: var(--mono);
+}
+.popup-coords {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: var(--mono);
+  margin-top: 8px;
+  cursor: pointer;
+  padding: 4px 8px;
+  background: rgba(255,255,255,0.04);
+  border-radius: 6px;
+  border: 1px solid var(--panel-border);
+  display: inline-block;
+  transition: background 0.15s;
+}
+.popup-coords:hover { background: rgba(255,255,255,0.08); }
+
+/* Cluster styling override */
+.marker-cluster-small, .marker-cluster-medium, .marker-cluster-large {
+  background-clip: padding-box;
+}
+.marker-cluster-small { background-color: rgba(37,99,235,0.25); }
+.marker-cluster-small div { background-color: rgba(37,99,235,0.7); }
+.marker-cluster-medium { background-color: rgba(220,38,38,0.25); }
+.marker-cluster-medium div { background-color: rgba(220,38,38,0.7); }
+.marker-cluster-large { background-color: rgba(147,51,234,0.25); }
+.marker-cluster-large div { background-color: rgba(147,51,234,0.7); }
+.marker-cluster div { color: #fff; font-family: var(--font); font-weight: 600; font-size: 12px; }
+
+/* Mobile */
+@media (max-width: 640px) {
+  #sidebar { width: 260px; }
+  #toggle-sidebar { left: 260px; }
+  #toggle-sidebar.collapsed { left: 0; }
+  #sidebar.collapsed { transform: translateX(-260px); }
+}
+
+/* Leaflet attribution cleanup */
+.leaflet-control-attribution { font-size: 9px !important; opacity: 0.5; }
+</style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div id="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo">
+      <div class="logo-mark">✡</div>
+      <div>
+        <div class="logo-text">Thailand Locations</div>
+        <div class="logo-sub">Jewish &amp; Israeli Community Map</div>
+      </div>
+    </div>
+    <div class="search-wrap">
+      <span class="search-icon">⌕</span>
+      <input id="search" type="text" placeholder="Search locations…" autocomplete="off">
+    </div>
+  </div>
+
+  <div class="zones-section">
+    <div class="section-label">Zones</div>
+    <div class="zone-toggle" id="zt1" data-zone="1" title="Click to fly to Bangkok">
+      <span class="zone-dot" style="background:var(--z1)"></span>
+      <span class="zone-info">
+        <div class="zone-name">Bangkok</div>
+        <div class="zone-count">30 locations · 3 clusters</div>
+      </span>
+      <span class="zone-fly">fly ↗</span>
+    </div>
+    <div class="zone-toggle" id="zt2" data-zone="2" title="Click to fly to Chiang Mai &amp; Pai">
+      <span class="zone-dot" style="background:var(--z2)"></span>
+      <span class="zone-info">
+        <div class="zone-name">Chiang Mai &amp; Pai</div>
+        <div class="zone-count">12 locations · 2 clusters</div>
+      </span>
+      <span class="zone-fly">fly ↗</span>
+    </div>
+    <div class="zone-toggle" id="zt3" data-zone="3" title="Click to fly to Phuket">
+      <span class="zone-dot" style="background:var(--z3)"></span>
+      <span class="zone-info">
+        <div class="zone-name">Phuket</div>
+        <div class="zone-count">14 locations · 2 clusters</div>
+      </span>
+      <span class="zone-fly">fly ↗</span>
+    </div>
+    <div class="zone-toggle" id="zt4" data-zone="4" title="Click to fly to Koh Samui &amp; Phangan">
+      <span class="zone-dot" style="background:var(--z4)"></span>
+      <span class="zone-info">
+        <div class="zone-name">Koh Samui &amp; Phangan</div>
+        <div class="zone-count">18 locations · 4 clusters</div>
+      </span>
+      <span class="zone-fly">fly ↗</span>
+    </div>
+  </div>
+
+  <div class="legend-section">
+    <div class="section-label">Sub-zones</div>
+    <div class="legend-grid" id="legend-grid"></div>
+  </div>
+
+  <div class="list-section" id="list-section"></div>
+
+  <div class="stats-bar">
+    <div class="stat"><div class="stat-num" id="stat-visible">74</div><div class="stat-label">visible</div></div>
+    <div class="stat"><div class="stat-num">4</div><div class="stat-label">zones</div></div>
+    <div class="stat"><div class="stat-num">11</div><div class="stat-label">clusters</div></div>
+  </div>
+</div>
+
+<button id="toggle-sidebar" title="Toggle sidebar">◀</button>
+
+<div id="top-controls">
+  <button class="ctrl-btn" id="btn-cluster">⬡ Clustering ON</button>
+  <button class="ctrl-btn active" id="btn-satellite">🗺 Street Map</button>
+  <button class="ctrl-btn" id="btn-all">⊙ Fit All</button>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script>
+const LOCATIONS = [
+  // Zone 1A — Bangkok Sukhumvit
+  {name:"Beth Elisheva Synagogue / JAT",lat:13.726234,lng:100.564140,zone:1,sub:"1A",type:"synagogue"},
+  {name:"Aspira Parc Hotel",lat:13.726367,lng:100.564477,zone:1,sub:"1A",type:"hotel"},
+  {name:"Serenita Residence",lat:13.726791,lng:100.563692,zone:1,sub:"1A",type:"hotel"},
+  {name:"SOVA Hotel",lat:13.725886,lng:100.564977,zone:1,sub:"1A",type:"hotel"},
+  {name:"Sleepbox Sukhumvit 22",lat:13.725738,lng:100.564557,zone:1,sub:"1A",type:"hotel"},
+  {name:"Marriott Executive Apartments Sukhumvit Park",lat:13.724535,lng:100.566668,zone:1,sub:"1A",type:"hotel"},
+  {name:"Four Wings Hotel",lat:13.724758,lng:100.568947,zone:1,sub:"1A",type:"hotel"},
+  {name:"Away Bangkok Sukhumvit",lat:13.728833,lng:100.564195,zone:1,sub:"1A",type:"hotel"},
+  {name:"Golden Tulip Mandison Suites",lat:13.729360,lng:100.563795,zone:1,sub:"1A",type:"hotel"},
+  {name:"JCafe / JDeli — Mille Malle Mall",lat:13.730079,lng:100.563572,zone:1,sub:"1A",type:"restaurant"},
+  {name:"Novotel Bangkok Sukhumvit 20",lat:13.731512,lng:100.564159,zone:1,sub:"1A",type:"hotel"},
+  {name:"Holiday Inn Bangkok Sukhumvit 22",lat:13.732873,lng:100.565474,zone:1,sub:"1A",type:"hotel"},
+  {name:"Rembrandt Hotel",lat:13.732490,lng:100.562910,zone:1,sub:"1A",type:"hotel"},
+  {name:"Carlton Hotel Bangkok Sukhumvit",lat:13.734576,lng:100.564555,zone:1,sub:"1A",type:"hotel"},
+  {name:"Bangkok Marriott Marquis Queen's Park",lat:13.730356,lng:100.565795,zone:1,sub:"1A",type:"hotel"},
+  {name:"Sheraton Grande Sukhumvit",lat:13.737410,lng:100.559084,zone:1,sub:"1A",type:"hotel"},
+  // Zone 1B — Bangkok Khao San
+  {name:"Ohr Menachem Chabad House Bangkok",lat:13.761708,lng:100.493219,zone:1,sub:"1B",type:"synagogue"},
+  {name:"Shoshana Restaurant",lat:13.760027,lng:100.496271,zone:1,sub:"1B",type:"restaurant"},
+  {name:"Riva Surya Bangkok",lat:13.762144,lng:100.493128,zone:1,sub:"1B",type:"hotel"},
+  {name:"New Siam Riverside",lat:13.761842,lng:100.493045,zone:1,sub:"1B",type:"hotel"},
+  {name:"Khaosan Art Hotel",lat:13.762225,lng:100.493928,zone:1,sub:"1B",type:"hotel"},
+  {name:"Chillax Resort",lat:13.762549,lng:100.500220,zone:1,sub:"1B",type:"hotel"},
+  {name:"Nouvo City Hotel",lat:13.762788,lng:100.499430,zone:1,sub:"1B",type:"hotel"},
+  {name:"Rambuttri Village Hotel",lat:13.761477,lng:100.496034,zone:1,sub:"1B",type:"hotel"},
+  {name:"Villa De Khaosan by Chillax",lat:13.758796,lng:100.495136,zone:1,sub:"1B",type:"hotel"},
+  // Zone 1C — Bangkok Silom
+  {name:"Even Chen Synagogue (Sephardic)",lat:13.723036,lng:100.518443,zone:1,sub:"1C",type:"synagogue"},
+  {name:"Holiday Inn Bangkok Silom",lat:13.722694,lng:100.519664,zone:1,sub:"1C",type:"hotel"},
+  {name:"Centerpoint Plus Hotel Silom",lat:13.720066,lng:100.515055,zone:1,sub:"1C",type:"hotel"},
+  {name:"Mandarin Oriental Bangkok",lat:13.723616,lng:100.514317,zone:1,sub:"1C",type:"hotel"},
+  {name:"Lebua at State Tower",lat:13.721484,lng:100.516893,zone:1,sub:"1C",type:"hotel"},
+  // Zone 2A — Chiang Mai
+  {name:"Chabad of Chiang Mai / Kosher Restaurant",lat:18.776912,lng:98.999285,zone:2,sub:"2A",type:"synagogue"},
+  {name:"Shangri-La Chiang Mai",lat:18.778322,lng:99.000222,zone:2,sub:"2A",type:"hotel"},
+  {name:"Yaangcome Hotel",lat:18.780056,lng:99.001099,zone:2,sub:"2A",type:"hotel"},
+  {name:"Centara Duang Tawan Hotel",lat:18.783738,lng:98.999150,zone:2,sub:"2A",type:"hotel"},
+  {name:"Dusit Princess / Royal Princess Chiang Mai",lat:18.783466,lng:98.999947,zone:2,sub:"2A",type:"hotel"},
+  {name:"InterContinental / The Imperial Mae Ping",lat:18.782910,lng:98.998010,zone:2,sub:"2A",type:"hotel"},
+  {name:"The Empress Hotel Chiang Mai",lat:18.775721,lng:98.999318,zone:2,sub:"2A",type:"hotel"},
+  {name:"Lana Palace Hotel",lat:18.773775,lng:98.998730,zone:2,sub:"2A",type:"hotel"},
+  {name:"Boarawoang / Bua Rawong Hotel",lat:18.773542,lng:98.999308,zone:2,sub:"2A",type:"hotel"},
+  {name:"Amata Lanna Chiang Mai",lat:18.779482,lng:99.004451,zone:2,sub:"2A",type:"hotel"},
+  {name:"The Chedi Home Chiang Mai",lat:18.792444,lng:98.995146,zone:2,sub:"2A",type:"hotel"},
+  // Zone 2B — Pai
+  {name:"Chabad House Pai",lat:19.356128,lng:98.440665,zone:2,sub:"2B",type:"synagogue"},
+  // Zone 3A — Phuket Patong
+  {name:"Chabad House Phuket Patong",lat:7.904384,lng:98.301365,zone:3,sub:"3A",type:"synagogue"},
+  {name:"Zenseana Patong",lat:7.905118,lng:98.300254,zone:3,sub:"3A",type:"hotel"},
+  {name:"iCheck Inn Chill Patong",lat:7.904366,lng:98.300902,zone:3,sub:"3A",type:"hotel"},
+  {name:"Movenpick Myth Hotel Patong",lat:7.902758,lng:98.301583,zone:3,sub:"3A",type:"hotel"},
+  {name:"The Lunar Patong",lat:7.902301,lng:98.300813,zone:3,sub:"3A",type:"hotel"},
+  {name:"ibis Phuket Patong",lat:7.902027,lng:98.299735,zone:3,sub:"3A",type:"hotel"},
+  {name:"Red Planet / Easy Planet Patong",lat:7.901319,lng:98.300401,zone:3,sub:"3A",type:"hotel"},
+  {name:"BYD Loft Boutique Hotel",lat:7.900908,lng:98.299629,zone:3,sub:"3A",type:"hotel"},
+  {name:"Hotel Indigo Phuket Patong",lat:7.899287,lng:98.299809,zone:3,sub:"3A",type:"hotel"},
+  {name:"Novotel Phuket Vintage Park",lat:7.898863,lng:98.300553,zone:3,sub:"3A",type:"hotel"},
+  {name:"Patong Paragon Resort and Spa",lat:7.906157,lng:98.298216,zone:3,sub:"3A",type:"hotel"},
+  {name:"The Charm Resort Phuket",lat:7.903970,lng:98.297795,zone:3,sub:"3A",type:"hotel"},
+  {name:"Phuket Graceland Resort and Spa",lat:7.902740,lng:98.297325,zone:3,sub:"3A",type:"hotel"},
+  // Zone 3B — Old Phuket Town
+  {name:"The Neighbors Cafe",lat:7.883734,lng:98.389887,zone:3,sub:"3B",type:"restaurant"},
+  // Zone 4A — Koh Samui Chaweng
+  {name:"Chabad of Koh Samui",lat:9.522335,lng:100.056977,zone:4,sub:"4A",type:"synagogue"},
+  {name:"Zohara Kosher Restaurant",lat:9.532033,lng:100.063878,zone:4,sub:"4A",type:"restaurant"},
+  {name:"Samui Green Hotel",lat:9.521594,lng:100.057630,zone:4,sub:"4A",type:"hotel"},
+  {name:"Le Murraya Resort",lat:9.521674,lng:100.055672,zone:4,sub:"4A",type:"hotel"},
+  {name:"Centara Reserve Samui",lat:9.519625,lng:100.057488,zone:4,sub:"4A",type:"hotel"},
+  {name:"Samui Resotel Beach Resort",lat:9.514271,lng:100.055977,zone:4,sub:"4A",type:"hotel"},
+  {name:"Banana Fan Sea Resort",lat:9.523154,lng:100.058552,zone:4,sub:"4A",type:"hotel"},
+  {name:"Burirasa Village Koh Samui",lat:9.524288,lng:100.058722,zone:4,sub:"4A",type:"hotel"},
+  {name:"Chaweng Buri Resort",lat:9.529397,lng:100.060953,zone:4,sub:"4A",type:"hotel"},
+  {name:"The Library Samui",lat:9.527202,lng:100.060865,zone:4,sub:"4A",type:"hotel"},
+  {name:"Nora Lakeview Hotel",lat:9.528154,lng:100.059603,zone:4,sub:"4A",type:"hotel"},
+  {name:"Baan Chaweng Beach Resort and Spa",lat:9.530062,lng:100.063040,zone:4,sub:"4A",type:"hotel"},
+  {name:"At the Resort (Chaweng Regent)",lat:9.533208,lng:100.066272,zone:4,sub:"4A",type:"hotel"},
+  // Zone 4B — Koh Samui Fisherman's Village
+  {name:"Baraca Kosher Mediterranean Restaurant",lat:9.559282,lng:100.031425,zone:4,sub:"4B",type:"restaurant"},
+  // Zone 4C — Koh Phangan Sri Thanu
+  {name:"Chabad House Koh Phangan",lat:9.756022,lng:99.966313,zone:4,sub:"4C",type:"synagogue"},
+  {name:"Sri Thanu Israeli Wellness & Villa Cluster",lat:9.755319,lng:99.963667,zone:4,sub:"4C",type:"community"},
+  // Zone 4D — Koh Phangan Haad Rin
+  {name:"The Israeli House",lat:9.676624,lng:100.065420,zone:4,sub:"4D",type:"restaurant"},
+  {name:"Haad Rin Israeli Food Cluster",lat:9.676891,lng:100.068050,zone:4,sub:"4D",type:"community"},
+];
+
+const ZONE_COLORS = { 1:"#2563eb", 2:"#16a34a", 3:"#dc2626", 4:"#9333ea" };
+const ZONE_BOUNDS = {
+  1: [[13.70,100.46],[13.78,100.59]],
+  2: [[18.76,98.42],[19.38,99.02]],
+  3: [[7.87,98.28],[7.92,98.41]],
+  4: [[9.50,99.94],[9.77,100.10]]
+};
+const SUB_COLORS = {
+  "1A":"#3b82f6","1B":"#60a5fa","1C":"#93c5fd",
+  "2A":"#22c55e","2B":"#86efac",
+  "3A":"#ef4444","3B":"#fca5a5",
+  "4A":"#a855f7","4B":"#c084fc","4C":"#d8b4fe","4D":"#e9d5ff"
+};
+const TYPE_ICONS = { synagogue:"✡", hotel:"🏨", restaurant:"🍽", community:"🏘" };
+
+// Init map
+const map = L.map('map', {
+  center: [13.0, 101.5],
+  zoom: 6,
+  zoomControl: false,
+  attributionControl: true
+});
+
+L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap contributors', maxZoom: 19
+});
+const satLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+  attribution: '© Esri', maxZoom: 19
+});
+satLayer.addTo(map);
+
+// Create marker icon
+function makeIcon(zone, sub) {
+  const color = SUB_COLORS[sub] || ZONE_COLORS[zone];
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="32" viewBox="0 0 24 32">
+    <path d="M12 0C5.373 0 0 5.373 0 12c0 8 12 20 12 20s12-12 12-20C24 5.373 18.627 0 12 0z" fill="${color}" stroke="rgba(0,0,0,0.3)" stroke-width="1"/>
+    <circle cx="12" cy="12" r="5" fill="white" fill-opacity="0.9"/>
+  </svg>`;
+  return L.divIcon({
+    html: svg, className: '', iconSize: [24,32], iconAnchor: [12,32], popupAnchor: [0,-34]
+  });
+}
+
+// Cluster groups per zone
+const clusterGroups = {};
+const markerMap = {};
+let clusteringOn = true;
+
+[1,2,3,4].forEach(z => {
+  clusterGroups[z] = L.markerClusterGroup({
+    maxClusterRadius: 50,
+    iconCreateFunction: (cluster) => {
+      const c = cluster.getChildCount();
+      const col = ZONE_COLORS[z];
+      return L.divIcon({
+        html: `<div style="background:${col}cc;border:2px solid ${col};border-radius:50%;width:36px;height:36px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:13px;font-family:'DM Sans',sans-serif;box-shadow:0 2px 8px rgba(0,0,0,0.4)">${c}</div>`,
+        className: '', iconSize: [36,36], iconAnchor: [18,18]
+      });
+    }
+  });
+  map.addLayer(clusterGroups[z]);
+});
+
+// Build markers
+LOCATIONS.forEach((loc, idx) => {
+  const icon = makeIcon(loc.zone, loc.sub);
+  const marker = L.marker([loc.lat, loc.lng], { icon });
+
+  const typeIcon = TYPE_ICONS[loc.type] || "📍";
+  const subColor = SUB_COLORS[loc.sub] || "#888";
+  const zoneColor = ZONE_COLORS[loc.zone];
+  const coordStr = `${loc.lat.toFixed(6)}, ${loc.lng.toFixed(6)}`;
+
+  marker.bindPopup(`
+    <div class="popup-name">${typeIcon} ${loc.name}</div>
+    <div class="popup-meta">
+      <span class="popup-tag" style="background:${zoneColor}22;color:${zoneColor};border:1px solid ${zoneColor}44">Zone ${loc.zone}</span>
+      <span class="popup-tag" style="background:${subColor}22;color:${subColor};border:1px solid ${subColor}44">${loc.sub}</span>
+      <span class="popup-tag" style="background:rgba(255,255,255,0.05);color:#9a9a8e;border:1px solid rgba(255,255,255,0.1)">${loc.type}</span>
+    </div>
+    <div class="popup-coords" onclick="navigator.clipboard.writeText('${coordStr}').then(()=>{this.textContent='✓ copied!';setTimeout(()=>{this.textContent='📋 ${coordStr}'},1500)})" title="Click to copy">📋 ${coordStr}</div>
+  `, { maxWidth: 280 });
+
+  clusterGroups[loc.zone].addLayer(marker);
+  markerMap[idx] = { marker, loc };
+});
+
+// Build legend
+const legendGrid = document.getElementById('legend-grid');
+Object.entries(SUB_COLORS).forEach(([sub, color]) => {
+  const labels = {
+    "1A":"Sukhumvit","1B":"Khao San","1C":"Silom",
+    "2A":"Chiang Mai","2B":"Pai",
+    "3A":"Patong","3B":"Old Town",
+    "4A":"Koh Samui","4B":"Bo Put","4C":"Sri Thanu","4D":"Haad Rin"
+  };
+  const el = document.createElement('div');
+  el.className = 'legend-item';
+  el.innerHTML = `<span class="legend-swatch" style="background:${color}"></span><span><b style="color:#d0d0c8;font-size:10px">${sub}</b> <span style="color:var(--text-muted)">${labels[sub]||sub}</span></span>`;
+  legendGrid.appendChild(el);
+});
+
+// Build list
+const listSection = document.getElementById('list-section');
+const groupedBySub = {};
+LOCATIONS.forEach((loc, idx) => {
+  if (!groupedBySub[loc.sub]) groupedBySub[loc.sub] = [];
+  groupedBySub[loc.sub].push({ ...loc, idx });
+});
+
+const subLabels = {
+  "1A":"1A · Sukhumvit Soi 20–22","1B":"1B · Khao San / Phra Athit","1C":"1C · Silom",
+  "2A":"2A · Chiang Mai","2B":"2B · Pai",
+  "3A":"3A · Patong Beach","3B":"3B · Old Phuket Town",
+  "4A":"4A · Koh Samui Chaweng","4B":"4B · Bo Put / Fisherman's Village",
+  "4C":"4C · Koh Phangan Sri Thanu","4D":"4D · Koh Phangan Haad Rin"
+};
+
+Object.entries(groupedBySub).forEach(([sub, locs]) => {
+  const glabel = document.createElement('div');
+  glabel.className = 'list-group-label';
+  glabel.setAttribute('data-sub', sub);
+  glabel.textContent = subLabels[sub] || sub;
+  listSection.appendChild(glabel);
+
+  locs.forEach(loc => {
+    const item = document.createElement('div');
+    item.className = 'list-item';
+    item.setAttribute('data-idx', loc.idx);
+    item.setAttribute('data-zone', loc.zone);
+    item.setAttribute('data-name', loc.name.toLowerCase());
+    item.innerHTML = `
+      <span class="list-dot" style="background:${SUB_COLORS[loc.sub]}"></span>
+      <span class="list-name">${loc.name}</span>
+      <span class="list-sub">${loc.sub}</span>
+    `;
+    item.addEventListener('click', () => {
+      const m = markerMap[loc.idx].marker;
+      map.setView([loc.lat, loc.lng], 17, { animate: true });
+      setTimeout(() => m.openPopup(), 400);
+      document.querySelectorAll('.list-item').forEach(el => el.classList.remove('active'));
+      item.classList.add('active');
+    });
+    listSection.appendChild(item);
+  });
+});
+
+// Zone click → fly to zone (no toggle, always visible)
+document.querySelectorAll('.zone-toggle').forEach(div => {
+  div.addEventListener('click', () => {
+    const z = parseInt(div.dataset.zone);
+    map.fitBounds(ZONE_BOUNDS[z], { padding: [40, 40], animate: true });
+    // Flash active state
+    document.querySelectorAll('.zone-toggle').forEach(d => d.classList.remove('active-zone'));
+    div.classList.add('active-zone');
+    setTimeout(() => div.classList.remove('active-zone'), 1200);
+  });
+});
+
+// Search
+const searchInput = document.getElementById('search');
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.toLowerCase().trim();
+  let visCount = 0;
+  document.querySelectorAll('.list-item').forEach(item => {
+    const name = item.dataset.name;
+    const zone = parseInt(item.dataset.zone);
+    const match = !q || name.includes(q);
+    const zoneOn = zoneVisible[zone];
+    const show = match && zoneOn;
+    item.classList.toggle('hidden-item', !show);
+    if (show) visCount++;
+  });
+  document.getElementById('stat-visible').textContent = visCount;
+});
+
+// Stats update
+function updateStats() {
+  const q = document.getElementById('search') ? document.getElementById('search').value.toLowerCase().trim() : '';
+  const visible = LOCATIONS.filter(l => !q || l.name.toLowerCase().includes(q)).length;
+  document.getElementById('stat-visible').textContent = visible;
+}
+
+function updateListVisibility() {
+  const q = document.getElementById('search') ? document.getElementById('search').value.toLowerCase().trim() : '';
+  document.querySelectorAll('.list-item').forEach(item => {
+    const name = item.dataset.name;
+    const show = !q || name.includes(q);
+    item.classList.toggle('hidden-item', !show);
+  });
+}
+
+// Cluster toggle
+let clusterBtn = document.getElementById('btn-cluster');
+clusterBtn.addEventListener('click', () => {
+  clusteringOn = !clusteringOn;
+  [1,2,3,4].forEach(z => {
+    map.removeLayer(clusterGroups[z]);
+    clusterGroups[z].disableClustering ? clusterGroups[z].disableClustering() : null;
+  });
+  if (clusteringOn) {
+    [1,2,3,4].forEach(z => {
+      if (clusterGroups[z].enableClustering) clusterGroups[z].enableClustering();
+      if (zoneVisible[z]) map.addLayer(clusterGroups[z]);
+    });
+    clusterBtn.textContent = '⬡ Clustering ON';
+    clusterBtn.classList.remove('active');
+  } else {
+    [1,2,3,4].forEach(z => {
+      if (clusterGroups[z].disableClustering) clusterGroups[z].disableClustering();
+      if (zoneVisible[z]) map.addLayer(clusterGroups[z]);
+    });
+    clusterBtn.textContent = '⬡ Clustering OFF';
+    clusterBtn.classList.add('active');
+  }
+});
+
+// Satellite toggle
+let satOn = true;
+document.getElementById('btn-satellite').addEventListener('click', function() {
+  satOn = !satOn;
+  if (satOn) { map.removeLayer(osmLayer); map.addLayer(satLayer); this.classList.add('active'); this.textContent = '🗺 Street Map'; }
+  else { map.removeLayer(satLayer); map.addLayer(osmLayer); this.classList.remove('active'); this.textContent = '🛰 Satellite'; }
+});
+
+// Fit all
+document.getElementById('btn-all').addEventListener('click', () => {
+  map.flyTo([13.0, 101.5], 6, { animate: true, duration: 1 });
+});
+
+// Sidebar toggle
+const sidebar = document.getElementById('sidebar');
+const toggleBtn = document.getElementById('toggle-sidebar');
+let sidebarOpen = true;
+toggleBtn.addEventListener('click', () => {
+  sidebarOpen = !sidebarOpen;
+  sidebar.classList.toggle('collapsed', !sidebarOpen);
+  toggleBtn.classList.toggle('collapsed', !sidebarOpen);
+  toggleBtn.textContent = sidebarOpen ? '◀' : '▶';
+});
+</script>
+</body>
+</html>
